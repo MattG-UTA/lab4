@@ -1,5 +1,7 @@
-// CSE 3318 Lab 5
-// Compile on OMEGA with: gcc warshall.c warshall_helpers.c -o warshall
+// Matthew Gutierrez
+// 1002333697
+// Lab 5
+// Compile Command: gcc warshall.c warshall_helpers.c -o Lab 5
 
 #include <stdio.h>
 #include <stdlib.h>
