@@ -6,11 +6,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAXV 50
-#define MAXE (MAXV * MAXV)
 #define INF 1000000
 
-static void printMatrix(int n, int leader[MAXV][MAXV], int succ[MAXV][MAXV])
+/* Allocate one n by n matrix with row pointers for normal matrix indexing. */
+static int **makeMatrix(int n)
+{
+  int **matrix;
+  int *data;
+  int i;
+
+  matrix=malloc(n*sizeof(int *));
+  data=malloc(n*n*sizeof(int));
+  if (matrix==NULL || data==NULL)
+  {
+    free(matrix);
+    free(data);
+    return NULL;
+  }
+
+  for (i=0;i<n;i++)
+    matrix[i]=data+i*n;
+
+  return matrix;
+}
+
+/* Free a matrix created by makeMatrix. */
+static void freeMatrix(int **matrix)
+{
+  if (matrix!=NULL)
+  {
+    free(matrix[0]);
+    free(matrix);
+  }
+}
+
+/* Reset the leader and successor matrices to the starting graph state. */
+static void initMatrices(int n, int **leader, int **succ)
+{
+  int i,j;
+
+  for (i=0;i<n;i++)
+    for (j=0;j<n;j++)
+    {
+      leader[i][j]=INF;
+      succ[i][j]=(-1);
+    }
+
+  for (i=0;i<n;i++)
+  {
+    leader[i][i]=i;
+    succ[i][i]=i;
+  }
+}
+
+/* Add a directed edge to the initial leader and successor matrices. */
+static void addEdge(int tail, int head, int **leader, int **succ)
+{
+  if (tail!=head)
+  {
+    leader[tail][head]=(tail<head) ? tail : head;
+    succ[tail][head]=head;
+  }
+}
+
+/* Print the current leader/successor matrix pair. */
+static void printMatrix(int n, int **leader, int **succ)
 {
   int i,j;
 
@@ -26,7 +86,8 @@ static void printMatrix(int n, int leader[MAXV][MAXV], int succ[MAXV][MAXV])
   printf("-------------------------------\n");
 }
 
-static void printPath(int start, int finish, int succ[MAXV][MAXV])
+/* Follow successor links to print a path from start to finish. */
+static void printPath(int start, int finish, int **succ, int endLine)
 {
   int current=start;
 
@@ -36,44 +97,39 @@ static void printPath(int start, int finish, int succ[MAXV][MAXV])
     current=succ[current][finish];
     printf(" %d",current);
   }
-  printf("\n");
+  if (endLine)
+    printf("\n");
 }
 
 int main(void)
 {
-  FILE *in;
-  int leader[MAXV][MAXV],succ[MAXV][MAXV];
-  int edgeTail[MAXE],edgeHead[MAXE];
+  int **leader,**succ;
+  int *edgeTail,*edgeHead;
   int n,i,j,k,tail,head,edgeCount=0,newLeader;
 
-  in=fopen("lab5.a.dat","r");
-  if (in==NULL)
-  {
-    fprintf(stderr,"Unable to open lab5.a.dat\n");
-    return 1;
-  }
-
-  if (fscanf(in,"%d",&n)!=1 || n<1 || n>MAXV)
+  if (scanf("%d",&n)!=1 || n<1)
   {
     fprintf(stderr,"Invalid vertex count\n");
-    fclose(in);
     return 1;
   }
 
-  for (i=0;i<n;i++)
-    for (j=0;j<n;j++)
-    {
-      leader[i][j]=INF;
-      succ[i][j]=(-1);
-    }
-
-  for (i=0;i<n;i++)
+  /* Allocate all storage based on the vertex count from stdin. */
+  leader=makeMatrix(n);
+  succ=makeMatrix(n);
+  edgeTail=malloc(n*n*sizeof(int));
+  edgeHead=malloc(n*n*sizeof(int));
+  if (leader==NULL || succ==NULL || edgeTail==NULL || edgeHead==NULL)
   {
-    leader[i][i]=i;
-    succ[i][i]=i;
+    fprintf(stderr,"Out of memory\n");
+    freeMatrix(leader);
+    freeMatrix(succ);
+    free(edgeTail);
+    free(edgeHead);
+    return 1;
   }
 
-  while (fscanf(in,"%d %d",&tail,&head)==2)
+  /* Read and validate the directed edges, storing them for later setup. */
+  while (scanf("%d %d",&tail,&head)==2)
   {
     if (tail==(-1) && head==(-1))
       break;
@@ -81,68 +137,30 @@ int main(void)
     if (tail<0 || tail>=n || head<0 || head>=n)
     {
       fprintf(stderr,"Invalid edge %d %d\n",tail,head);
-      fclose(in);
+      freeMatrix(leader);
+      freeMatrix(succ);
+      free(edgeTail);
+      free(edgeHead);
       return 1;
     }
 
-    if (edgeCount<MAXE)
+    if (edgeCount<n*n)
     {
       edgeTail[edgeCount]=tail;
       edgeHead[edgeCount]=head;
       edgeCount++;
     }
-
-    if (tail!=head)
-    {
-      leader[tail][head]=(tail<head) ? tail : head;
-      succ[tail][head]=head;
-    }
   }
 
-  for (j=0;j<n;j++)
-    for (i=0;i<n;i++)
-      if (leader[i][j]!=INF)
-        for (k=0;k<n;k++)
-          if (leader[j][k]!=INF)
-          {
-            newLeader=leader[i][j];
-            if (leader[j][j]<newLeader)
-              newLeader=leader[j][j];
-            if (leader[j][k]<newLeader)
-              newLeader=leader[j][k];
-
-            if (leader[i][k]==INF)
-            {
-              leader[i][k]=newLeader;
-              succ[i][k]=succ[i][j];
-            }
-            else if (newLeader<leader[i][k])
-              leader[i][k]=newLeader;
-          }
-
-  for (i=0;i<n;i++)
-    for (j=0;j<n;j++)
-    {
-      leader[i][j]=INF;
-      succ[i][j]=(-1);
-    }
-
-  for (i=0;i<n;i++)
-  {
-    leader[i][i]=i;
-    succ[i][i]=i;
-  }
+  /* Build and print the starting matrix before the Warshall passes. */
+  initMatrices(n,leader,succ);
 
   for (i=0;i<edgeCount;i++)
-    if (edgeTail[i]!=edgeHead[i])
-    {
-      leader[edgeTail[i]][edgeHead[i]]=
-        (edgeTail[i]<edgeHead[i]) ? edgeTail[i] : edgeHead[i];
-      succ[edgeTail[i]][edgeHead[i]]=edgeHead[i];
-    }
+    addEdge(edgeTail[i],edgeHead[i],leader,succ);
 
   printMatrix(n,leader,succ);
 
+  /* Run Warshall's algorithm one intermediate vertex at a time. */
   for (j=0;j<n;j++)
   {
     for (i=0;i<n;i++)
@@ -167,18 +185,27 @@ int main(void)
     printMatrix(n,leader,succ);
   }
 
+  /* Print each vertex's leader status and paths to and from its leader. */
   for (i=0;i<n;i++)
     if (leader[i][i]==i)
-      printf("Vertex %d is a leader\n",i);
+    {
+      printf("Vertex %d is a leader",i);
+      if (i<n-1)
+        printf("\n");
+    }
     else
     {
       printf("Vertex path to leader is:  ");
-      printPath(i,leader[i][i],succ);
+      printPath(i,leader[i][i],succ,1);
       printf("Vertex path from leader is:  ");
-      printPath(leader[i][i],i,succ);
+      printPath(leader[i][i],i,succ,i<n-1);
     }
 
-  fclose(in);
+  /* Release dynamically allocated memory before exiting. */
+  freeMatrix(leader);
+  freeMatrix(succ);
+  free(edgeTail);
+  free(edgeHead);
 
   return 0;
 }
