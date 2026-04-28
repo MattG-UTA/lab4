@@ -13,18 +13,12 @@
 static void printMatrix(int n, int leader[MAXV][MAXV], int succ[MAXV][MAXV])
 {
   int i,j;
-  static int firstCell=1;
 
   for (i=0;i<n;i++)
   {
     for (j=0;j<n;j++)
       if (leader[i][j]==INF)
         printf("oo     ");
-      else if (firstCell)
-      {
-        printf("%d %2d  ",leader[i][j],succ[i][j]);
-        firstCell=0;
-      }
       else
         printf("%2d %2d  ",leader[i][j],succ[i][j]);
     printf("\n");
