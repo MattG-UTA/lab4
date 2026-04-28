@@ -126,14 +126,6 @@ int main(void)
               leader[i][k]=newLeader;
           }
 
-  printf("digraph G {\n");
-  for (i=0;i<n;i++)
-    if (leader[i][i]==i)
-      printf("\"%d\" [style=bold];\n",i);
-  for (i=0;i<edgeCount;i++)
-    printf("%d->%d;\n",edgeTail[i],edgeHead[i]);
-  printf("}\n");
-
   for (i=0;i<n;i++)
     for (j=0;j<n;j++)
     {
